@@ -19,7 +19,8 @@ class YouTubeProvider(BaseLyricProvider):
         album: Optional[str] = None,
         isrc: Optional[str] = None,
         url: Optional[str] = None,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> Optional[LyricResult]:
         if not song and not artist:
             return None
@@ -91,7 +92,7 @@ class YouTubeProvider(BaseLyricProvider):
                             start_ms = event.get("tStartMs", 0)
                             words = "".join([s.get("utf8", "") for s in segs]).replace("\n", " ").strip()
                             if words and words != "♪":
-                                ts_str = format_timestamp(start_ms / 1000.0, sync_precision)
+                                ts_str = format_timestamp(start_ms / 1000.0, force_precision)
                                 lrc_lines.append(f"[{ts_str}] {words}")
                                 txt_lines.append(words)
 

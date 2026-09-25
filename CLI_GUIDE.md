@@ -17,7 +17,7 @@ This guide provides a comprehensive breakdown of all command-line arguments, fla
 | `--no-txt` | `--no-txt` | Disable saving `.txt` files | `python vizx_lyrics.py -q "Song" --no-txt` |
 | `--no-ttml` | `--no-ttml` | Disable saving `.ttml` files | `python vizx_lyrics.py -q "Song" --no-ttml` |
 | `-o` | `--output` | Specify custom download output directory path | `python vizx_lyrics.py -o "D:/Music/Lyrics" -q "Song"` |
-| `--list-providers` | `--list-providers` | List all 18 available lyric providers & current priority ranks | `python vizx_lyrics.py --list-providers` |
+| `--list-providers` | `--list-providers` | List all 12 available lyric providers & current priority ranks | `python vizx_lyrics.py --list-providers` |
 | `-v` | `--version` | Display VizX-Lyrics version number | `python vizx_lyrics.py -v` |
 | `-h` | `--help` | Show command-line help message | `python vizx_lyrics.py --help` |
 
@@ -45,7 +45,7 @@ This guide provides a comprehensive breakdown of all command-line arguments, fla
 ---
 
 ### 3. `-a`, `--all-providers`
-- **Description**: Enables **Multi-Provider Mode** across all active providers simultaneously. VizX-Lyrics queries all 18 lyric providers concurrently in parallel using `ThreadPoolExecutor` and saves `.lrc`, `.txt`, and `.ttml` files from every provider that has lyrics.
+- **Description**: Enables **Multi-Provider Mode** across all active providers simultaneously. VizX-Lyrics queries all 12 lyric providers concurrently in parallel using `ThreadPoolExecutor` and saves `.lrc`, `.txt`, and `.ttml` files from every provider that has lyrics.
 - **Example**:
   ```bash
   python vizx_lyrics.py -q "Legends Never Die" -a
@@ -57,18 +57,12 @@ This guide provides a comprehensive breakdown of all command-line arguments, fla
 - **Description**: Passes a custom comma-separated list of provider keys to specify exact provider execution order or search a single provider.
 - **Available Provider Keys**:
   - `bLyrics-richsynced` (Better Lyrics Syllable)
-  - `bLyrics-synced` (Better Lyrics Line)
   - `musixmatch-richsync` (Musixmatch Word)
-  - `musixmatch-synced` (Musixmatch Line)
   - `portato-richsynced` (QQ Music Word)
   - `legato-synced` (KuGou Line)
   - `binimum-richsynced` (BiniLyrics Syllable)
-  - `binimum-synced` (BiniLyrics Line)
   - `unison-richsynced` (Unison Syllable)
-  - `unison-synced` (Unison Line)
-  - `unison-plain` (Unison Unsynced)
   - `lrclib-synced` (LRCLib Synced)
-  - `lrclib-plain` (LRCLib Unsynced)
   - `yt-captions` (YouTube Subtitles)
   - `yt-lyrics` (YouTube Lyrics)
   - `genius-plain` (Genius Unsynced)
@@ -125,7 +119,7 @@ This guide provides a comprehensive breakdown of all command-line arguments, fla
 ---
 
 ### 9. `--list-providers`
-- **Description**: Prints a formatted Rich table listing all 18 integrated lyric providers, their active priority ranks, and sync types.
+- **Description**: Prints a formatted Rich table listing all 12 integrated lyric providers, their active priority ranks, and sync types.
 - **Example**:
   ```bash
   python vizx_lyrics.py --list-providers

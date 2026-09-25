@@ -1,16 +1,16 @@
 # VizX-Lyrics
 
-A powerful, menu-driven Python application and CLI engine to search and download time-synced lyrics (`.lrc`), plain text lyrics (`.txt`), and rich TTML lyrics (`.ttml`) from **18+ Lyric Providers** with multi-provider fallback pipelines, sync hierarchy filtering, and customizable format export.
+A powerful, menu-driven Python application and CLI engine to search and download time-synced lyrics (`.lrc`), plain text lyrics (`.txt`), and rich TTML lyrics (`.ttml`) from **12 Lyric Providers** with multi-provider fallback pipelines, sync hierarchy filtering, and customizable format export.
 
 ---
 
 ## 🌟 Features
 
-- **🌐 18 Lyric Providers Integrated**:
+- **🌐 12 Lyric Providers Integrated**:
   - **Syllable-Synced (RichSync / TTML)**: Better Lyrics (`bLyrics-richsynced`), Unison (`unison-richsynced`), BiniLyrics (`binimum-richsynced`)
   - **Word-Synced**: QQ Music (`portato-richsynced`), Musixmatch (`musixmatch-richsync`)
-  - **Line-Synced**: Apple Music (`applemusic`), Better Lyrics (`bLyrics-synced`), LRCLib (`lrclib-synced`), NetEase Cloud Music (`netease-synced`), Musixmatch (`musixmatch-synced`), KuGou (`legato-synced`), BiniLyrics (`binimum-synced`), Unison (`unison-synced`), YouTube Captions (`yt-captions`)
-  - **Plain Text / Unsynced**: Genius (`genius-plain`), YouTube Lyrics (`yt-lyrics`), LRCLib (`lrclib-plain`), Unison (`unison-plain`)
+  - **Line-Synced**: Apple Music (`applemusic`), LRCLib (`lrclib-synced`), NetEase Cloud Music (`netease-synced`), KuGou (`legato-synced`), YouTube Captions (`yt-captions`)
+  - **Plain Text / Unsynced**: Genius (`genius-plain`), YouTube Lyrics (`yt-lyrics`)
 - **🎯 Dynamic Sync Hierarchy**: Automatic fallback prioritizing **Syllable-Synced** → **Word-Synced** → **Line-Synced** → **Plain Text**.
 - **⚡ Dual Execution Modes**:
   - **Fallback Mode (First Hit)**: Returns highest-quality synced lyrics from the first matching provider in your priority order.
@@ -54,7 +54,7 @@ python vizx_lyrics.py
 
 #### Main Menu Options:
 * **`[1]` Search & Download Lyrics (Priority Pipeline)**: Search catalog (Apple Music with LRCLib & YouTube fallback) and download lyrics using your configured priority order & sync hierarchy.
-* **`[2]` Search & Download via Custom Provider**: Choose a specific provider from the list of 18 providers to fetch lyrics directly.
+* **`[2]` Search & Download via Custom Provider**: Choose a specific provider from the list of 12 providers to fetch lyrics directly.
 * **`[3]` Search & Download from ALL Providers (Save All)**: Fetch and save lyrics simultaneously from every active provider.
 * **`[4]` Download via Apple Music URL**: Input an Apple Music song or album URL.
 * **`[5]` Configure Lyrics Formats & Precision**: Toggle `.lrc`, `.txt`, `.ttml` formats or pick quick presets (ONLY LRC, ONLY TTML, ALL, etc.).
@@ -90,7 +90,7 @@ python vizx_lyrics.py -q "Fortnight Taylor Swift" --no-txt --no-ttml
 python vizx_lyrics.py -s "https://music.apple.com/us/album/song-title/123456789?i=123456790"
 ```
 
-#### List All 18 Available Providers & Active Priority Ranks
+#### List All 12 Available Providers & Active Priority Ranks
 ```bash
 python vizx_lyrics.py --list-providers
 ```

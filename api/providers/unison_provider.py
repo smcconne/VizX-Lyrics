@@ -7,13 +7,11 @@ UNISON_API_URL = "https://unison.boidu.dev/lyrics"
 
 UNISON_CONFIGS = {
     "unison-richsynced": {"name": "Unison (Syllable)", "sync_type": "syllable"},
-    "unison-synced": {"name": "Unison (Line)", "sync_type": "line"},
-    "unison-plain": {"name": "Unison (Plain)", "sync_type": "unsynced"},
 }
 
 class UnisonProvider(BaseLyricProvider):
     def __init__(self, key: str):
-        meta = UNISON_CONFIGS.get(key, {"name": "Unison", "sync_type": "line"})
+        meta = UNISON_CONFIGS.get(key, {"name": "Unison (Syllable)", "sync_type": "syllable"})
         super().__init__(key=key, name=meta["name"], sync_type=meta["sync_type"])
 
     def fetch_lyrics(
@@ -24,7 +22,8 @@ class UnisonProvider(BaseLyricProvider):
         album: Optional[str] = None,
         isrc: Optional[str] = None,
         url: Optional[str] = None,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> Optional[LyricResult]:
         if not song and not artist:
             return None
@@ -65,7 +64,7 @@ class UnisonProvider(BaseLyricProvider):
 
             if lyric_fmt == "ttml":
                 ttml_content = raw_lyrics
-                lrc_lines = parse_ttml_to_lrc(ttml_content, sync_precision)
+                lrc_lines = parse_ttml_to_lrc(ttml_content, force_precision)
                 txt_lines = [line.split("]", 1)[-1].strip() for line in lrc_lines if "]" in line]
             elif lyric_fmt == "lrc":
                 lrc_lines = parse_lrc_string(raw_lyrics)
@@ -75,14 +74,6 @@ class UnisonProvider(BaseLyricProvider):
 
             # Determine actual sync level
             actual_sync: SyncType = "syllable" if lyric_fmt == "ttml" else ("line" if lrc_lines else "unsynced")
-
-            # Check if matching requested key type
-            if self.key == "unison-richsynced" and actual_sync != "syllable":
-                return None
-            if self.key == "unison-synced" and actual_sync == "unsynced":
-                return None
-            if self.key == "unison-plain" and actual_sync != "unsynced":
-                return None
 
             return LyricResult(
                 provider_key=self.key,

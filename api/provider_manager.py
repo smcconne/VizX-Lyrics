@@ -7,6 +7,7 @@ from api.providers.lrclib_provider import LRCLibProvider
 from api.providers.youtube_provider import YouTubeProvider
 from api.providers.genius_provider import GeniusProvider
 from api.providers.netease_provider import NeteaseProvider
+from api.providers.sync_detector import detect_sync_type
 
 SYNC_HIERARCHY: List[SyncType] = ["syllable", "word", "line", "unsynced"]
 
@@ -21,19 +22,19 @@ class ProviderManager:
         # Register all available provider instances
         self.providers["applemusic"] = AppleMusicProvider(self.cache_dir, self.config_dir)
 
-        # BetterLyrics / Cubey Providers
+        # BetterLyrics / Cubey Providers.
         for key in [
-            "bLyrics-richsynced", "bLyrics-synced", "musixmatch-richsync", "musixmatch-synced",
-            "portato-richsynced", "legato-synced", "binimum-richsynced", "binimum-synced"
+            "bLyrics-richsynced", "musixmatch-richsync",
+            "portato-richsynced", "legato-synced", "binimum-richsynced"
         ]:
             self.providers[key] = BetterLyricsProvider(key)
 
         # Unison Providers
-        for key in ["unison-richsynced", "unison-synced", "unison-plain"]:
+        for key in ["unison-richsynced"]:
             self.providers[key] = UnisonProvider(key)
 
         # LRCLib Providers
-        for key in ["lrclib-synced", "lrclib-plain"]:
+        for key in ["lrclib-synced"]:
             self.providers[key] = LRCLibProvider(key)
 
         # YouTube Providers
@@ -93,7 +94,8 @@ class ProviderManager:
         preferred_keys: Optional[List[str]] = None,
         provider_mode: str = "fallback",
         use_sync_hierarchy: bool = True,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> List[LyricResult]:
         """
         Executes lyric retrieval across configured providers.
@@ -122,9 +124,11 @@ class ProviderManager:
                         album=album,
                         isrc=isrc,
                         url=url,
-                        sync_precision=sync_precision
+                        force_precision=force_precision,
+                        applemusic_track=applemusic_track
                     )
                     if res and res.has_content():
+                        res.sync_type = detect_sync_type(res)
                         logger.info(f"Lyrics found via {provider.name}!")
                         return (ordered_providers.index(provider), res)
                 except Exception as e:
@@ -143,8 +147,27 @@ class ProviderManager:
             indexed_results.sort(key=lambda x: x[0])
             return [r for idx, r in indexed_results]
 
-        # Sequential fallback mode
+        SYNC_HIERARCHY_IDX = {"syllable": 0, "word": 1, "line": 2, "unsynced": 3}
+
+        demoted_by_tier: Dict[int, LyricResult] = {}
+        prev_declared_idx: Optional[int] = None
+
+        # Sequential fallback mode with tier-aware demotion and tier-boundary early exit.
         for provider in ordered_providers:
+            declared_idx = SYNC_HIERARCHY_IDX[provider.sync_type]
+
+            # See if any demoted candidate at the upcoming tier is already in hand.
+            if use_sync_hierarchy and prev_declared_idx is not None and declared_idx > prev_declared_idx:
+                for check_idx in range(declared_idx + 1):
+                    if check_idx in demoted_by_tier:
+                        demoted = demoted_by_tier[check_idx]
+                        logger.info(
+                            f"No higher-tier hits; using best demoted result "
+                            f"({demoted.provider_name}, {demoted.sync_type})."
+                        )
+                        return [demoted]
+            prev_declared_idx = declared_idx
+
             logger.info(f"Trying lyric source: {provider.name} ({provider.key}) [{provider.sync_type}]...")
             try:
                 res = provider.fetch_lyrics(
@@ -154,14 +177,48 @@ class ProviderManager:
                     album=album,
                     isrc=isrc,
                     url=url,
-                    sync_precision=sync_precision
+                    force_precision=force_precision,
+                    applemusic_track=applemusic_track
                 )
-                if res and res.has_content():
-                    logger.info(f"Lyrics found via {provider.name}!")
-                    results.append(res)
-                    break
+                if not (res and res.has_content()):
+                    continue
+
+                actual = detect_sync_type(res)
+                res.sync_type = actual
+                actual_idx = SYNC_HIERARCHY_IDX[actual]
+
+                if use_sync_hierarchy:
+                    declared_idx = SYNC_HIERARCHY_IDX[provider.sync_type]
+
+                    if actual_idx <= declared_idx:
+                        # True-tier hit (or promotion): accept and stop.
+                        logger.info(f"Lyrics found via {provider.name} ({actual})!")
+                        return [res]
+
+                    # Demoted: track the first (highest-priority) candidate at this tier.
+                    if actual_idx not in demoted_by_tier:
+                        demoted_by_tier[actual_idx] = res
+                        logger.warning(
+                            f"[{provider.name}] declared {provider.sync_type} but returned {actual} content; demoting."
+                        )
+                    # Otherwise keep iterating so later providers of the same declared tier can be demoted too.
+                else:
+                    # Strict priority mode: first non-empty result wins (original behavior).
+                    logger.info(f"Lyrics found via {provider.name} ({actual})!")
+                    return [res]
+
             except Exception as e:
                 logger.warning(f"Failed to fetch from {provider.name}: {e}")
                 continue
 
+        if use_sync_hierarchy:
+            # End of loop: return best remaining demoted (lowest tier index wins).
+            for check_idx in range(4):
+                if check_idx in demoted_by_tier:
+                    demoted = demoted_by_tier[check_idx]
+                    logger.info(
+                        f"No true-tier hits; using best demoted result "
+                        f"({demoted.provider_name}, {demoted.sync_type})."
+                    )
+                    return [demoted]
         return results

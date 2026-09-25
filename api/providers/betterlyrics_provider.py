@@ -9,16 +9,13 @@ CUBEY_LYRICS_API_URL = "https://lyrics.api.dacubeking.com/"
 
 PROVIDER_METADATA: Dict[str, Dict[str, Any]] = {
     "bLyrics-richsynced": {"name": "Better Lyrics (Syllable)", "sync_type": "syllable"},
-    "bLyrics-synced": {"name": "Better Lyrics (Line)", "sync_type": "line"},
     "musixmatch-richsync": {"name": "Musixmatch (Word)", "sync_type": "word"},
-    "musixmatch-synced": {"name": "Musixmatch (Line)", "sync_type": "line"},
     "portato-richsynced": {"name": "QQ Music (Word)", "sync_type": "word"},
     "legato-synced": {"name": "KuGou (Line)", "sync_type": "line"},
     "binimum-richsynced": {"name": "BiniLyrics (Syllable)", "sync_type": "syllable"},
-    "binimum-synced": {"name": "BiniLyrics (Line)", "sync_type": "line"},
 }
 
-def parse_ttml_to_lrc(ttml_text: str, sync_precision: int = 2) -> List[str]:
+def parse_ttml_to_lrc(ttml_text: str, force_precision: int = 2) -> List[str]:
     """Parses raw TTML string into LRC format lines."""
     lrc_lines = []
     try:
@@ -29,7 +26,7 @@ def parse_ttml_to_lrc(ttml_text: str, sync_precision: int = 2) -> List[str]:
                 continue
             
             # Format begin timestamp
-            ts_str = format_timestamp(begin, sync_precision)
+            ts_str = format_timestamp(begin, force_precision)
             
             spans = line.find_all("span", attrs={"begin": True})
             if spans:
@@ -38,7 +35,7 @@ def parse_ttml_to_lrc(ttml_text: str, sync_precision: int = 2) -> List[str]:
                     s_begin = span.get("begin")
                     w_text = span.text.strip()
                     if s_begin and w_text:
-                        w_ts = format_timestamp(s_begin, sync_precision)
+                        w_ts = format_timestamp(s_begin, force_precision)
                         word_parts.append(f"<{w_ts}> {w_text}")
                 lrc_lines.append(f"[{ts_str}] " + " ".join(word_parts))
             else:
@@ -52,7 +49,7 @@ def parse_lrc_string(lrc_text: str) -> List[str]:
     """Splits raw LRC text into clean non-empty lines."""
     return [line.strip() for line in lrc_text.splitlines() if line.strip()]
 
-def parse_qrc_to_lrc(qrc_text: str, sync_precision: int = 2) -> List[str]:
+def parse_qrc_to_lrc(qrc_text: str, force_precision: int = 2) -> List[str]:
     """Parses QQ Music QRC format ([ms,dur]word(ms,dur)...) into LRC format lines."""
     lrc_lines = []
     for line in qrc_text.splitlines():
@@ -63,14 +60,14 @@ def parse_qrc_to_lrc(qrc_text: str, sync_precision: int = 2) -> List[str]:
         match = re.match(r"^\[(\d+),(\d+)\](.*)", line)
         if match:
             line_start_ms = int(match.group(1))
-            line_ts = format_timestamp(line_start_ms / 1000.0, sync_precision)
+            line_ts = format_timestamp(line_start_ms / 1000.0, force_precision)
             content = match.group(3)
             
             words = re.findall(r"(.*?)\((\d+),(\d+)\)", content)
             if words:
                 word_parts = []
                 for w_text, w_start_ms, w_dur in words:
-                    w_ts = format_timestamp(int(w_start_ms) / 1000.0, sync_precision)
+                    w_ts = format_timestamp(int(w_start_ms) / 1000.0, force_precision)
                     w_clean = w_text.strip()
                     if w_clean:
                         word_parts.append(f"<{w_ts}> {w_clean}")
@@ -83,7 +80,7 @@ def parse_qrc_to_lrc(qrc_text: str, sync_precision: int = 2) -> List[str]:
             
     return lrc_lines
 
-def format_timestamp(ts: str, sync_precision: int = 2) -> str:
+def format_timestamp(ts: str, force_precision: int = 2) -> str:
     """Normalizes time string into mm:ss.xx format."""
     ts = str(ts).replace("s", "").strip()
     if ":" in ts:
@@ -95,7 +92,7 @@ def format_timestamp(ts: str, sync_precision: int = 2) -> str:
         mins = int(total_secs // 60)
         secs = total_secs % 60
     
-    if sync_precision == 3:
+    if force_precision == 3:
         return f"{mins:02d}:{secs:06.3f}"
     return f"{mins:02d}:{secs:05.2f}"
 
@@ -146,7 +143,8 @@ class BetterLyricsProvider(BaseLyricProvider):
         isrc: Optional[str] = None,
         url: Optional[str] = None,
         video_id: Optional[str] = None,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> Optional[LyricResult]:
         if not song and not artist:
             return None
@@ -213,12 +211,12 @@ class BetterLyricsProvider(BaseLyricProvider):
                         results = data.get("results", {})
 
                         # Match target provider key
-                        if self.key in ("bLyrics-richsynced", "bLyrics-synced") and provider_id == "golyrics":
+                        if self.key == "bLyrics-richsynced" and provider_id == "golyrics":
                             ttml = results.get("lyrics")
                             if ttml:
                                 if isinstance(ttml, str) and ttml.startswith("{"):
                                     ttml = json.loads(ttml).get("ttml", ttml)
-                                lrc_lines = parse_ttml_to_lrc(ttml, sync_precision)
+                                lrc_lines = parse_ttml_to_lrc(ttml, force_precision)
                                 txt_lines = [BeautifulSoup(ttml, "lxml-xml").text.strip()]
                                 return LyricResult(
                                     provider_key=self.key,
@@ -229,29 +227,26 @@ class BetterLyricsProvider(BaseLyricProvider):
                                     ttml_content=ttml
                                 )
 
-                        elif self.key == "musixmatch-richsync" and provider_id == "musixmatch" and results.get("wordByWord"):
-                            lrc_lines = parse_lrc_string(results["wordByWord"])
+                        elif self.key == "musixmatch-richsync" and provider_id == "musixmatch":
+                            if results.get("wordByWord"):
+                                lrc_lines = parse_lrc_string(results["wordByWord"])
+                                sync = "word"
+                            elif results.get("synced"):
+                                lrc_lines = parse_lrc_string(results["synced"])
+                                sync = "line"
+                            else:
+                                continue  # nothing to return
                             return LyricResult(
                                 provider_key=self.key,
                                 provider_name=self.name,
-                                sync_type="word",
+                                sync_type=sync,
                                 lrc_lines=lrc_lines,
                                 txt_lines=[re.sub(r"\[.*?\]|<.*?>", "", line).strip() for line in lrc_lines]
                             )
 
-                        elif self.key == "musixmatch-synced" and provider_id == "musixmatch" and results.get("synced"):
-                            lrc_lines = parse_lrc_string(results["synced"])
-                            return LyricResult(
-                                provider_key=self.key,
-                                provider_name=self.name,
-                                sync_type="line",
-                                lrc_lines=lrc_lines,
-                                txt_lines=[re.sub(r"\[.*?\]", "", line).strip() for line in lrc_lines]
-                            )
-
                         elif self.key == "portato-richsynced" and provider_id == "qq" and results.get("lyrics"):
                             raw_lyrics = json.loads(results["lyrics"]).get("lyrics", "") if isinstance(results["lyrics"], str) and results["lyrics"].startswith("{") else str(results["lyrics"])
-                            lrc_lines = parse_qrc_to_lrc(raw_lyrics, sync_precision)
+                            lrc_lines = parse_qrc_to_lrc(raw_lyrics, force_precision)
                             if not lrc_lines:
                                 lrc_lines = parse_lrc_string(raw_lyrics)
                             return LyricResult(
@@ -273,10 +268,10 @@ class BetterLyricsProvider(BaseLyricProvider):
                                 txt_lines=[re.sub(r"\[.*?\]", "", line).strip() for line in lrc_lines]
                             )
 
-                        elif provider_id == "binimum" and self.key in ("binimum-richsynced", "binimum-synced"):
+                        elif provider_id == "binimum" and self.key == "binimum-richsynced":
                             ttml = results.get("lyrics")
                             if ttml:
-                                lrc_lines = parse_ttml_to_lrc(ttml, sync_precision)
+                                lrc_lines = parse_ttml_to_lrc(ttml, force_precision)
                                 return LyricResult(
                                     provider_key=self.key,
                                     provider_name=self.name,

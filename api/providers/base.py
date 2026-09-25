@@ -49,7 +49,8 @@ class BaseLyricProvider(ABC):
         isrc: Optional[str] = None,
         url: Optional[str] = None,
         video_id: Optional[str] = None,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> Optional[LyricResult]:
         """
         Fetches lyrics from the provider.

@@ -22,15 +22,15 @@ def __sanitize(path):
         return sanitize(path)
     return path
 
-def get_applemusic_instance(sync_precision=2):
-    return AppleMusic(CACHE, CONFIG, sync_precision)
+def get_applemusic_instance(force_precision=2):
+    return AppleMusic(CACHE, CONFIG, force_precision)
 
 def download_lyrics(
     url: str,
     save_lrc: bool = True,
     save_txt: bool = True,
     save_ttml: bool = True,
-    sync_precision: int = 2,
+    force_precision: int = 2,
     output_dir: str = "downloads",
     preferred_providers: list = None,
     provider_mode: str = None,
@@ -82,7 +82,7 @@ def download_lyrics(
             }]
         }
     else:
-        applemusic = AppleMusic(CACHE, CONFIG, sync_precision)
+        applemusic = AppleMusic(CACHE, CONFIG, force_precision)
         data = applemusic.getInfo(url)
 
     if not data or "tracks" not in data:
@@ -124,7 +124,8 @@ def download_lyrics(
             preferred_keys=preferred_providers,
             provider_mode=provider_mode,
             use_sync_hierarchy=use_sync_hierarchy,
-            sync_precision=sync_precision
+            force_precision=force_precision,
+            applemusic_track=track
         )
 
         if not results:
@@ -178,7 +179,7 @@ def arguments(args):
     save_txt = not args.no_txt if getattr(args, 'no_txt', False) else settings["save_txt"]
     save_ttml = not args.no_ttml if getattr(args, 'no_ttml', False) else settings["save_ttml"]
     
-    sync_precision = 3 if getattr(args, 'sync', False) else settings["sync_precision"]
+    force_precision = 3 if getattr(args, 'sync', False) else settings["force_timestamp_precision_lrc"]
     output_dir = getattr(args, 'output', None) or settings["output_dir"]
 
     providers = None
@@ -192,7 +193,7 @@ def arguments(args):
         save_lrc=save_lrc,
         save_txt=save_txt,
         save_ttml=save_ttml,
-        sync_precision=sync_precision,
+        force_precision=force_precision,
         output_dir=output_dir,
         preferred_providers=providers,
         provider_mode=provider_mode

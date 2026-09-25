@@ -9,9 +9,7 @@ LRCLIB_SEARCH_URL = "https://lrclib.net/api/search"
 
 class LRCLibProvider(BaseLyricProvider):
     def __init__(self, key: str):
-        sync_type = "line" if key == "lrclib-synced" else "unsynced"
-        name = "LRCLib (Synced)" if key == "lrclib-synced" else "LRCLib (Plain)"
-        super().__init__(key=key, name=name, sync_type=sync_type)
+        super().__init__(key=key, name="LRCLib (Synced)", sync_type="line")
 
     def fetch_lyrics(
         self,
@@ -21,7 +19,8 @@ class LRCLibProvider(BaseLyricProvider):
         album: Optional[str] = None,
         isrc: Optional[str] = None,
         url: Optional[str] = None,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> Optional[LyricResult]:
         if not song and not artist:
             return None
@@ -65,35 +64,24 @@ class LRCLibProvider(BaseLyricProvider):
             synced_lyrics = data.get("syncedLyrics")
             plain_lyrics = data.get("plainLyrics")
 
-            if self.key == "lrclib-synced":
-                if not synced_lyrics:
-                    return None
+            if not synced_lyrics and not plain_lyrics:
+                return None
+
+            if synced_lyrics:
                 lrc_lines = parse_lrc_string(synced_lyrics)
                 txt_lines = [re.sub(r"\[.*?\]", "", line).strip() for line in lrc_lines if line.strip()]
-                return LyricResult(
-                    provider_key=self.key,
-                    provider_name=self.name,
-                    sync_type="line",
-                    lrc_lines=lrc_lines,
-                    txt_lines=txt_lines,
-                    source_href="https://lrclib.net"
-                )
+            else:
+                lrc_lines = []
+                txt_lines = [line.strip() for line in plain_lyrics.splitlines() if line.strip()]
 
-            elif self.key == "lrclib-plain":
-                if not plain_lyrics and not synced_lyrics:
-                    return None
-                if plain_lyrics:
-                    txt_lines = [line.strip() for line in plain_lyrics.splitlines() if line.strip()]
-                else:
-                    txt_lines = [re.sub(r"\[.*?\]", "", line).strip() for line in synced_lyrics.splitlines() if line.strip()]
-
-                return LyricResult(
-                    provider_key=self.key,
-                    provider_name=self.name,
-                    sync_type="unsynced",
-                    txt_lines=txt_lines,
-                    source_href="https://lrclib.net"
-                )
+            return LyricResult(
+                provider_key=self.key,
+                provider_name=self.name,
+                sync_type=self.sync_type,  # let detect_sync_type recompute downstream; safe default is "line"
+                lrc_lines=lrc_lines,
+                txt_lines=txt_lines,
+                source_href="https://lrclib.net"
+            )
 
         except Exception as e:
             from utils import logger

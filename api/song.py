@@ -1,5 +1,17 @@
 from api.lyrics import getLyrics
 
+def _resolve_ttml(rel):
+    """Return TTML from inline relationship attributes if present, else None."""
+    if not isinstance(rel, dict):
+        return None
+
+    rel_data = rel.get("data") or []
+    if rel_data and isinstance(rel_data[0], dict):
+        attrs = rel_data[0].get("attributes") or {}
+        return attrs.get("ttml")
+
+    return None
+
 def song(data, syncpoints):
     info = {}
     attr = data["data"][0]["relationships"]["albums"]["data"][0]["attributes"]
@@ -58,12 +70,18 @@ def song(data, syncpoints):
         if "durationInMillis" in attr:
             __info["duration"] = attr.get("durationInMillis", 0) / 1000.0
 
-        if "syllable-lyrics" in track.get("relationships", {}) and len(track["relationships"]["syllable-lyrics"].get("data", [])) > 0:
-            __info["ttml"] = track["relationships"]["syllable-lyrics"]["data"][0]["attributes"].get("ttml")
-            __info.update(getLyrics(__info["ttml"], syncpoints))
-        elif "lyrics" in track.get("relationships", {}) and len(track["relationships"]["lyrics"].get("data", [])) > 0:
-            __info["ttml"] = track["relationships"]["lyrics"]["data"][0]["attributes"].get("ttml")
-            __info.update(getLyrics(__info["ttml"], syncpoints))
+        relationships = track.get("relationships", {})
+
+        # Lookup order: inline syllable-lyrics attributes -> inline lyrics attributes.
+        ttml = None
+        if "syllable-lyrics" in relationships:
+            ttml = _resolve_ttml(relationships["syllable-lyrics"])
+        if not ttml and "lyrics" in relationships:
+            ttml = _resolve_ttml(relationships["lyrics"])
+
+        if ttml:
+            __info["ttml"] = ttml
+            __info.update(getLyrics(ttml, syncpoints))
 
         trackList.append(__info)
         

@@ -54,7 +54,7 @@ def configure_formats_menu(config: Configure):
         lrc_status = "[bold green]ENABLED[/bold green]" if settings["save_lrc"] else "[bold red]DISABLED[/bold red]"
         txt_status = "[bold green]ENABLED[/bold green]" if settings["save_txt"] else "[bold red]DISABLED[/bold red]"
         ttml_status = "[bold green]ENABLED[/bold green]" if settings["save_ttml"] else "[bold red]DISABLED[/bold red]"
-        precision_status = f"[bold yellow]{settings['sync_precision']} ms digits[/bold yellow]"
+        precision_status = f"[bold yellow]{settings['force_timestamp_precision_lrc']} decimals[/bold yellow]"
 
         menu_text = (
             f"[1] Toggle LRC (.lrc)     : {lrc_status}\n"
@@ -64,7 +64,7 @@ def configure_formats_menu(config: Configure):
             f"[5] Preset: Save ONLY TTML (.ttml)\n"
             f"[6] Preset: Save ONLY TXT (.txt)\n"
             f"[7] Preset: Save ALL Formats (LRC + TXT + TTML)\n"
-            f"[8] Toggle Sync Precision : {precision_status}\n"
+            f"[8] Force Timestamp Precision (.lrc) : {precision_status}\n"
             f"[0] Back to Main Menu"
         )
 
@@ -98,8 +98,8 @@ def configure_formats_menu(config: Configure):
             config.set_setting("save_ttml", True)
             logger.info("Format preset updated: ALL FORMATS (LRC + TXT + TTML)")
         elif choice == "8":
-            new_prec = 3 if settings["sync_precision"] == 2 else 2
-            config.set_setting("sync_precision", new_prec)
+            new_prec = 3 if settings["force_timestamp_precision_lrc"] == 2 else 2
+            config.set_setting("force_timestamp_precision_lrc", new_prec)
         elif choice == "0":
             break
 
@@ -112,8 +112,11 @@ def configure_providers_menu(config: Configure):
         mode = settings["provider_mode"]
         use_hierarchy = settings["use_sync_hierarchy"]
 
-        mode_str = "[bold green]Fallback (First Hit)[/bold green]" if mode == "fallback" else "[bold magenta]Multi-Provider (Save All)[/bold magenta]"
-        hier_str = "[bold green]ENABLED (Syllable -> Word -> Line -> Plain)[/bold green]" if use_hierarchy else "[bold yellow]DISABLED (Strict Priority Order)[/bold yellow]"
+        mode_str = ("[bold green]First Hit for Sync Type[/bold green]" if use_hierarchy else "[bold green]First Hit[/bold green]") if mode == "fallback" else "[bold magenta]Multi-Provider (Save All)[/bold magenta]"
+        if mode == "multi":
+            hier_str = "[dim]Does not apply to Multi-Provider mode[/dim]"
+        else:
+            hier_str = "[bold green]ENABLED (Syllable -> Word -> Line -> Plain)[/bold green]" if use_hierarchy else "[bold yellow]DISABLED (Strict Priority Order)[/bold yellow]"
 
         table = Table(title="LYRICS PROVIDERS & PRIORITY ORDER", title_justify="center", border_style="bright_cyan")
         table.add_column("Rank", justify="center", style="bold yellow")
@@ -127,6 +130,8 @@ def configure_providers_menu(config: Configure):
             prov = pm.get_provider(key)
             name = prov.name if prov else key
             stype = prov.sync_type if prov else "unknown"
+            if stype == "unknown":
+                continue
             table.add_row(str(idx), key, name, stype, "[bold green]ACTIVE[/bold green]")
 
         # Then display disabled providers at the bottom
@@ -135,15 +140,19 @@ def configure_providers_menu(config: Configure):
                 prov = pm.get_provider(key)
                 name = prov.name if prov else key
                 stype = prov.sync_type if prov else "unknown"
+                if stype == "unknown":
+                    continue
                 table.add_row("-", key, name, stype, "[bold red]OFF[/bold red]")
 
         console.print(Align.center(table))
         console.print()
 
+        option_2 = "[dim][2] Toggle Sync Hierarchy Preference (disabled in Multi-Provider mode)[/dim]" if mode == "multi" else "[2] Toggle Sync Hierarchy Preference"
+
         options_text = (
             f"Mode: {mode_str}  |  Sync Hierarchy: {hier_str}\n\n"
-            f"[1] Toggle Provider Mode (Fallback vs Multi-Save)\n"
-            f"[2] Toggle Sync Hierarchy Preference\n"
+            f"[1] Toggle Provider Mode (First Hit vs Multi-Save)\n"
+            f"{option_2}\n"
             f"[3] Enable/Disable Provider Key\n"
             f"[4] Move Provider Priority Up\n"
             f"[5] Move Provider Priority Down\n"
@@ -158,7 +167,10 @@ def configure_providers_menu(config: Configure):
             new_mode = "multi" if mode == "fallback" else "fallback"
             config.set_setting("provider_mode", new_mode)
         elif choice == "2":
-            config.set_setting("use_sync_hierarchy", not use_hierarchy)
+            if mode == "fallback":
+                config.set_setting("use_sync_hierarchy", not use_hierarchy)
+            else:
+                logger.info("Sync Hierarchy preference does not apply to Multi-Provider mode; ignored.")
         elif choice == "3":
             key_input = Prompt.ask("\n[bold green]> Enter Provider Key to toggle[/bold green]").strip()
             if key_input in DEFAULT_PROVIDERS:
@@ -239,7 +251,7 @@ def search_custom_provider_menu(config: Configure):
 
     url = None
     if input_mode == "1":
-        applemusic = get_applemusic_instance(settings["sync_precision"])
+        applemusic = get_applemusic_instance(settings["force_timestamp_precision_lrc"])
         url = search_and_select(applemusic)
     elif input_mode == "2":
         url_in = Prompt.ask("\n[bold green]> Enter Apple Music Song or Album URL[/bold green]")
@@ -253,7 +265,7 @@ def search_custom_provider_menu(config: Configure):
             save_lrc=settings["save_lrc"],
             save_txt=settings["save_txt"],
             save_ttml=settings["save_ttml"],
-            sync_precision=settings["sync_precision"],
+            force_precision=settings["force_timestamp_precision_lrc"],
             output_dir=settings["output_dir"],
             preferred_providers=[selected_key],
             provider_mode="fallback",
@@ -263,7 +275,7 @@ def search_custom_provider_menu(config: Configure):
 def search_all_providers_menu(config: Configure):
     print_banner()
     settings = config.get_settings()
-    applemusic = get_applemusic_instance(settings["sync_precision"])
+    applemusic = get_applemusic_instance(settings["force_timestamp_precision_lrc"])
     url = search_and_select(applemusic)
     if url:
         logger.info("Downloading lyrics from ALL active providers...")
@@ -272,7 +284,7 @@ def search_all_providers_menu(config: Configure):
             save_lrc=settings["save_lrc"],
             save_txt=settings["save_txt"],
             save_ttml=settings["save_ttml"],
-            sync_precision=settings["sync_precision"],
+            force_precision=settings["force_timestamp_precision_lrc"],
             output_dir=settings["output_dir"],
             provider_mode="multi",
             use_sync_hierarchy=False
@@ -329,7 +341,7 @@ def main_menu():
         choice = Prompt.ask("\n[bold green]> Select an option[/bold green]", choices=["1", "2", "3", "4", "5", "6", "7", "0"])
 
         if choice == "1":
-            applemusic = get_applemusic_instance(settings["sync_precision"])
+            applemusic = get_applemusic_instance(settings["force_timestamp_precision_lrc"])
             url = search_and_select(applemusic)
             if url:
                 download_lyrics(
@@ -337,7 +349,7 @@ def main_menu():
                     save_lrc=settings["save_lrc"],
                     save_txt=settings["save_txt"],
                     save_ttml=settings["save_ttml"],
-                    sync_precision=settings["sync_precision"],
+                    force_precision=settings["force_timestamp_precision_lrc"],
                     output_dir=settings["output_dir"]
                 )
                 Prompt.ask("\n[dim]Press Enter to return to main menu...[/dim]")
@@ -355,7 +367,7 @@ def main_menu():
                     save_lrc=settings["save_lrc"],
                     save_txt=settings["save_txt"],
                     save_ttml=settings["save_ttml"],
-                    sync_precision=settings["sync_precision"],
+                    force_precision=settings["force_timestamp_precision_lrc"],
                     output_dir=settings["output_dir"]
                 )
                 Prompt.ask("\n[dim]Press Enter to return to main menu...[/dim]")
@@ -480,8 +492,8 @@ def main():
         print_banner()
         config = Configure(CONFIG)
         settings = config.get_settings()
-        sync_precision = 3 if args.sync else settings["sync_precision"]
-        applemusic = get_applemusic_instance(sync_precision)
+        force_precision = 3 if args.sync else settings["force_timestamp_precision_lrc"]
+        applemusic = get_applemusic_instance(force_precision)
         url = search_and_select(applemusic, query=args.query)
         if url:
             output_dir = args.output or settings["output_dir"]
@@ -491,7 +503,7 @@ def main():
                 save_lrc=not args.no_lrc,
                 save_txt=not args.no_txt,
                 save_ttml=not args.no_ttml,
-                sync_precision=sync_precision,
+                force_precision=force_precision,
                 output_dir=output_dir,
                 preferred_providers=providers,
                 provider_mode=provider_mode,
@@ -504,7 +516,7 @@ def main():
         print_banner()
         config = Configure(CONFIG)
         settings = config.get_settings()
-        sync_precision = 3 if args.sync else settings["sync_precision"]
+        force_precision = 3 if args.sync else settings["force_timestamp_precision_lrc"]
         output_dir = args.output or settings["output_dir"]
         providers = [p.strip() for p in args.providers.split(",")] if args.providers else None
         download_lyrics(
@@ -512,7 +524,7 @@ def main():
             save_lrc=not args.no_lrc,
             save_txt=not args.no_txt,
             save_ttml=not args.no_ttml,
-            sync_precision=sync_precision,
+            force_precision=force_precision,
             output_dir=output_dir,
             preferred_providers=providers,
             provider_mode=provider_mode,

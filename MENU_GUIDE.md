@@ -83,7 +83,7 @@ python vizx_lyrics.py
   - `[5] Preset: Save ONLY TTML`: Quick preset for `.ttml` files only.
   - `[6] Preset: Save ONLY TXT`: Quick preset for `.txt` files only.
   - `[7] Preset: Save ALL Formats`: Quick preset for `.lrc` + `.txt` + `.ttml`.
-  - `[8] Toggle Sync Precision`: Toggle between 2-decimal (`00:00.00`) and 3-decimal (`00:00.000`) timestamps.
+  - `[8] Force Timestamp Precision (.lrc)`: Toggle between 2-decimal (`00:00.00`) and 3-decimal (`00:00.000`) timestamps for saved `.lrc` files.
 
 ---
 

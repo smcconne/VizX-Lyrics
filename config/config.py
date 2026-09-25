@@ -8,19 +8,15 @@ DEFAULT_PROVIDERS = [
     "binimum-richsynced",
     "portato-richsynced",
     "musixmatch-richsync",
-    "bLyrics-synced",
-    "unison-synced",
     "yt-captions",
-    "binimum-synced",
     "lrclib-synced",
     "legato-synced",
-    "musixmatch-synced",
     "netease-synced",
     "yt-lyrics",
-    "unison-plain",
-    "lrclib-plain",
     "genius-plain",
 ]
+# Note: pickled configs from older versions may still contain removed provider keys;
+# ProviderManager.get_ordered_providers drops them silently via `if k in self.providers`.
 
 class Configure(object):
     def __init__(self, config: str):
@@ -40,7 +36,7 @@ class Configure(object):
                 "save_lrc": True,
                 "save_txt": True,
                 "save_ttml": True,
-                "sync_precision": 2,
+                "force_timestamp_precision_lrc": 2,
                 "provider_mode": "fallback",
                 "use_sync_hierarchy": True,
                 "preferred_providers": list(DEFAULT_PROVIDERS)
@@ -90,7 +86,8 @@ class Configure(object):
             "save_lrc": cfg.get("save_lrc", True),
             "save_txt": cfg.get("save_txt", True),
             "save_ttml": cfg.get("save_ttml", True),
-            "sync_precision": cfg.get("sync_precision", 2),
+            # Backward-compat: fall back to legacy "sync_precision" key for existing configs
+            "force_timestamp_precision_lrc": cfg.get("force_timestamp_precision_lrc", cfg.get("sync_precision", 2)),
             "provider_mode": cfg.get("provider_mode", "fallback"),
             "use_sync_hierarchy": cfg.get("use_sync_hierarchy", True),
             "preferred_providers": cfg.get("preferred_providers", list(DEFAULT_PROVIDERS)),

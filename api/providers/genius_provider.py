@@ -16,7 +16,8 @@ class GeniusProvider(BaseLyricProvider):
         album: Optional[str] = None,
         isrc: Optional[str] = None,
         url: Optional[str] = None,
-        sync_precision: int = 2
+        force_precision: int = 2,
+        applemusic_track: Optional[dict] = None
     ) -> Optional[LyricResult]:
         if not song and not artist:
             return None

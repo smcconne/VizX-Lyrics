@@ -211,18 +211,28 @@ class AppleMusic(object):
 
         apiUrl = f'https://amp-api.music.apple.com/v1/catalog/{self.storefront}/{self.kind}s/{self.id}'
 
-        self.__session.params = {
-            'include[songs]': 'albums,lyrics,syllable-lyrics',
-            'l': f'{self.language}'
-        }
+        if self.kind == "album":
+            # Bracket-scoped include cascades into the album's tracks relationships —
+            # this is how Apple's API inlines per-track syllable/lyrics for /albums/{id}.
+            params = {
+                'include[songs]': 'lyrics,syllable-lyrics',
+                'l': self.language,
+            }
+        else:  # "song"
+            # Plain include is the canonical form for /songs/{id} (gamdl, librelyrics, Lyrico).
+            params = {
+                'include': 'albums,lyrics,syllable-lyrics',
+                'l': self.language,
+            }
 
-        response = self.__session.get(apiUrl)
+        response = self.__session.get(apiUrl, params=params)
         response = json.loads(response.text)
 
-        if not "errors" in response:
+        if "errors" not in response:
             self.__cache.set(cacheKey, response)
             return response
-        else: self.__getErrors(response)
+        else:
+            self.__getErrors(response)
 
     def getInfo(self, url):
         self.__getUrl(url)
