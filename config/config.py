@@ -15,6 +15,14 @@ DEFAULT_PROVIDERS = [
     "yt-lyrics",
     "genius-plain",
 ]
+
+APPLE_MUSIC_TOKEN_INSTRUCTIONS = """How to get your media-user-token:
+  1. Sign in to music.apple.com in a desktop browser (a free Apple ID works for searching)
+  2. Open DevTools (F12 or Ctrl+Shift+I) -> Application tab -> Cookies -> https://music.apple.com
+  3. Copy the value of the "media-user-token" cookie and paste it below
+Note: A free Apple ID is sufficient for searching. Apple's lyrics are rehosted
+by other providers (Musixmatch, etc.), so synced lyrics will still be available
+via fallback providers even if Apple's own lyrics aren't returned."""
 # Note: pickled configs from older versions may still contain removed provider keys;
 # ProviderManager.get_ordered_providers drops them silently via `if k in self.providers`.
 
@@ -26,6 +34,7 @@ class Configure(object):
         self.__config = os.path.join(config, "config.bin")
 
         if not os.path.exists(self.__config):
+            print(APPLE_MUSIC_TOKEN_INSTRUCTIONS)
             __mediaUserToken = input("\n\tmedia-user-token: ")
             print()
 
@@ -58,6 +67,7 @@ class Configure(object):
         return cfg.get("mediaUserToken")
 
     def set(self):
+        print(APPLE_MUSIC_TOKEN_INSTRUCTIONS)
         __mediaUserToken = input("\n\tmedia-user-token: ")
         print()
         cfg = self._read_config()

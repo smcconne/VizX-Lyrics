@@ -55,33 +55,12 @@ class ProviderManager:
     ) -> List[BaseLyricProvider]:
         """
         Orders requested active providers.
-        If use_sync_hierarchy is True:
-          Groups active providers by SyncType hierarchy (syllable -> word -> line -> unsynced),
-          preserving relative user priority order within each level.
-        Else:
-          Strictly follows the preferred_keys order.
+        Always returns providers in the strict user priority order from preferred_keys.
+        When use_sync_hierarchy is True, tier-aware targeting (the moving target tier
+        and demotion tracking) lives in fetch_lyrics; ordering stays strictly by rank.
         """
         active_list = [self.providers[k] for k in preferred_keys if k in self.providers]
-
-        if not use_sync_hierarchy:
-            return active_list
-
-        # Group by sync hierarchy
-        grouped: Dict[SyncType, List[BaseLyricProvider]] = {
-            "syllable": [],
-            "word": [],
-            "line": [],
-            "unsynced": []
-        }
-
-        for provider in active_list:
-            grouped[provider.sync_type].append(provider)
-
-        ordered: List[BaseLyricProvider] = []
-        for sync_level in SYNC_HIERARCHY:
-            ordered.extend(grouped[sync_level])
-
-        return ordered
+        return active_list
 
     def fetch_lyrics(
         self,
@@ -150,23 +129,24 @@ class ProviderManager:
         SYNC_HIERARCHY_IDX = {"syllable": 0, "word": 1, "line": 2, "unsynced": 3}
 
         demoted_by_tier: Dict[int, LyricResult] = {}
-        prev_declared_idx: Optional[int] = None
 
-        # Sequential fallback mode with tier-aware demotion and tier-boundary early exit.
-        for provider in ordered_providers:
-            declared_idx = SYNC_HIERARCHY_IDX[provider.sync_type]
+        # cutoffs[T] = last rank index at which tier T appears (only for tiers present).
+        cutoffs: Dict[str, int] = {}
+        for i, provider in enumerate(ordered_providers):
+            cutoffs[provider.sync_type] = i
 
-            # See if any demoted candidate at the upcoming tier is already in hand.
-            if use_sync_hierarchy and prev_declared_idx is not None and declared_idx > prev_declared_idx:
-                for check_idx in range(declared_idx + 1):
-                    if check_idx in demoted_by_tier:
-                        demoted = demoted_by_tier[check_idx]
-                        logger.info(
-                            f"No higher-tier hits; using best demoted result "
-                            f"({demoted.provider_name}, {demoted.sync_type})."
-                        )
-                        return [demoted]
-            prev_declared_idx = declared_idx
+        def _current_target_idx(i: int) -> int:
+            # Highest tier (in SYNC_HIERARCHY order) whose last rank index is >= i.
+            for tier in SYNC_HIERARCHY:
+                if tier in cutoffs and cutoffs[tier] >= i:
+                    return SYNC_HIERARCHY_IDX[tier]
+            return 3
+
+        # Sequential fallback mode: strict rank order with a moving target tier.
+        # The target tier only drops once the last provider of the current target
+        # tier (by rank index) has been tried.
+        for i, provider in enumerate(ordered_providers):
+            target_idx = _current_target_idx(i)
 
             logger.info(f"Trying lyric source: {provider.name} ({provider.key}) [{provider.sync_type}]...")
             try:
@@ -188,20 +168,20 @@ class ProviderManager:
                 actual_idx = SYNC_HIERARCHY_IDX[actual]
 
                 if use_sync_hierarchy:
-                    declared_idx = SYNC_HIERARCHY_IDX[provider.sync_type]
-
-                    if actual_idx <= declared_idx:
-                        # True-tier hit (or promotion): accept and stop.
+                    if actual_idx <= target_idx:
+                        # Same-or-better than the tier we're searching for: accept and stop.
                         logger.info(f"Lyrics found via {provider.name} ({actual})!")
                         return [res]
 
-                    # Demoted: track the first (highest-priority) candidate at this tier.
+                    # Demoted: track the first (highest-rank) candidate at this actual tier.
                     if actual_idx not in demoted_by_tier:
                         demoted_by_tier[actual_idx] = res
+                        target_tier_name = SYNC_HIERARCHY[target_idx]
                         logger.warning(
-                            f"[{provider.name}] declared {provider.sync_type} but returned {actual} content; demoting."
+                            f"[{provider.name}] returning {actual} while target tier is "
+                            f"{target_tier_name}; demoting."
                         )
-                    # Otherwise keep iterating so later providers of the same declared tier can be demoted too.
+                    # Otherwise keep iterating in rank order.
                 else:
                     # Strict priority mode: first non-empty result wins (original behavior).
                     logger.info(f"Lyrics found via {provider.name} ({actual})!")
@@ -211,14 +191,12 @@ class ProviderManager:
                 logger.warning(f"Failed to fetch from {provider.name}: {e}")
                 continue
 
-        if use_sync_hierarchy:
-            # End of loop: return best remaining demoted (lowest tier index wins).
-            for check_idx in range(4):
-                if check_idx in demoted_by_tier:
-                    demoted = demoted_by_tier[check_idx]
-                    logger.info(
-                        f"No true-tier hits; using best demoted result "
-                        f"({demoted.provider_name}, {demoted.sync_type})."
-                    )
-                    return [demoted]
+        if use_sync_hierarchy and demoted_by_tier:
+            # End of loop: return best remaining demoted (lowest actual tier index wins).
+            demoted = demoted_by_tier[min(demoted_by_tier)]
+            logger.info(
+                f"No true-tier hits; using best demoted result "
+                f"({demoted.provider_name}, {demoted.sync_type})."
+            )
+            return [demoted]
         return results

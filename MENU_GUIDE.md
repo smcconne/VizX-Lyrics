@@ -25,13 +25,12 @@ python vizx_lyrics.py
     ╚═══╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚══════╝╚═╝   ╚═╝  ╚═╝╚═╝ ╚═════╝╚══════╝
 
                VIZX-LYRICS MAIN MENU
- [1] 🔍 Search & Download Lyrics (Priority Pipeline)
- [2] 🎯 Search & Download via Custom Provider
- [3] 🌐 Search & Download from ALL Providers (Save All)
- [4] 🔗 Download via Apple Music URL
- [5] ⚙️ Configure Lyrics Formats & Precision
- [6] 🎛️ Configure Lyric Providers & Priority
- [7] 📁 Configure Download Output Folder
+ [1] 🌐 Search & Download Lyrics (Priority Pipeline / Save All)
+ [2] 🎯 Search & Download Lyrics (Choose Provider)
+ [3] 🔗 Download via Apple Music URL
+ [4] ⚙️ Configure Formats to Save
+ [5] 🎛️ Configure Lyric Providers & Priority
+ [6] 📁 Configure Download Output Folder
  [0] 🚪 Exit
 ```
 
@@ -39,17 +38,18 @@ python vizx_lyrics.py
 
 ## 📖 Main Menu Options Explained
 
-### `[1]` 🔍 Search & Download Lyrics (Priority Pipeline)
+### `[1]` 🌐 Search & Download Lyrics (Priority Pipeline / Save All)
 - **Description**: Search for any song or artist name across catalog engines (Apple Music with automatic fallback to LRCLib & YouTube Music).
 - **Workflow**:
   1. Enter your search query.
   2. A formatted Rich table will display top 20 matches with **#**, **Title**, **Artist**, and **Album/Source**.
   3. Enter the song number (or select track/whole album).
   4. VizX-Lyrics will fetch and save lyrics using your active **Provider Priority Rank** and **Sync Hierarchy**.
+- **Dynamic label**: Both the icon and label reflect your current **Provider Mode** setting in *Configure Lyric Providers & Priority → [1] Toggle Provider Mode*. In `Fallback` mode the entry shows 🔍 "Search & Download Lyrics (Priority Pipeline)"; in `Multi-Provider` mode it shows 🌐 "Search & Download from ALL Providers (Save All)".
 
 ---
 
-### `[2]` 🎯 Search & Download via Custom Provider
+### `[2]` 🎯 Search & Download Lyrics (Choose Provider)
 - **Description**: Target a specific provider directly without altering your overall global settings.
 - **Workflow**:
   1. Displays a numbered table of all 18 lyric providers.
@@ -59,21 +59,12 @@ python vizx_lyrics.py
 
 ---
 
-### `[3]` 🌐 Search & Download from ALL Providers (Save All)
-- **Description**: Simultaneously query all 18 active lyric providers in parallel using `ThreadPoolExecutor` and save all returned `.lrc`, `.txt`, and `.ttml` files.
-- **Workflow**:
-  1. Enter song/artist search query and pick track.
-  2. Queries all 18 providers concurrently in ~1–2 seconds.
-  3. Exports files from every successful provider into your output folder.
-
----
-
-### `[4]` 🔗 Download via Apple Music URL
+### `[3]` 🔗 Download via Apple Music URL
 - **Description**: Direct link download mode. Paste an Apple Music song or full album URL (`https://music.apple.com/...`).
 
 ---
 
-### `[5]` ⚙️ Configure Lyrics Formats & Precision
+### `[4]` ⚙️ Configure Formats to Save
 - **Description**: Configure export formats and millisecond timecode precision.
 - **Options**:
   - `[1] Toggle LRC (.lrc)`: Enable or disable `.lrc` time-synced export.
@@ -87,7 +78,7 @@ python vizx_lyrics.py
 
 ---
 
-### `[6]` 🎛️ Configure Lyric Providers & Priority
+### `[5]` 🎛️ Configure Lyric Providers & Priority
 - **Description**: Full management screen for provider ranking, sync hierarchy, and API keys.
 - **Table View**: Displays all active providers in priority rank order (`1`, `2`, `3`...) along with their sync level (**Syllable**, **Word**, **Line**, **Unsynced**).
 - **Options**:
@@ -103,7 +94,7 @@ python vizx_lyrics.py
 
 ---
 
-### `[7]` 📁 Configure Download Output Folder & Subfolders
+### `[6]` 📁 Configure Download Output Folder & Subfolders
 - **Description**: Configure destination storage path and file organization.
 - **Options**:
   - `[1] Change Download Output Folder`: Set custom storage path (e.g. `downloads` or `D:/Music/Lyrics`).

@@ -40,3 +40,31 @@ class Cache(object):
 
         with open(self.__cache, 'wb') as c:
             pickle.dump(__cache, c)
+
+    def clear(self, preserve=None):
+        """Remove all cached entries, optionally keeping a set of keys.
+
+        ``preserve`` may be a single key or an iterable of keys to retain.
+        Returns the number of entries that were removed.
+        """
+        if preserve is None:
+            preserved_keys = set()
+        elif isinstance(preserve, str):
+            preserved_keys = {preserve}
+        else:
+            preserved_keys = set(preserve)
+
+        with open(self.__cache, 'rb') as c:
+            __cache = pickle.load(c)
+
+        removed = 0
+        for key in list(__cache.keys()):
+            if key in preserved_keys:
+                continue
+            del __cache[key]
+            removed += 1
+
+        with open(self.__cache, 'wb') as c:
+            pickle.dump(__cache, c)
+
+        return removed

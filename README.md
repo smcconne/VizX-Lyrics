@@ -53,13 +53,12 @@ python vizx_lyrics.py
 ```
 
 #### Main Menu Options:
-* **`[1]` Search & Download Lyrics (Priority Pipeline)**: Search catalog (Apple Music with LRCLib & YouTube fallback) and download lyrics using your configured priority order & sync hierarchy.
+* **`[1]` Search & Download Lyrics (Priority Pipeline / Save All)**: Search catalog (Apple Music with LRCLib & YouTube fallback) and download lyrics using your configured priority order & sync hierarchy. The displayed label reflects your **Provider Mode** setting — `Fallback` shows "Priority Pipeline", `Multi-Provider` shows "from ALL Providers (Save All)".
 * **`[2]` Search & Download via Custom Provider**: Choose a specific provider from the list of 12 providers to fetch lyrics directly.
-* **`[3]` Search & Download from ALL Providers (Save All)**: Fetch and save lyrics simultaneously from every active provider.
-* **`[4]` Download via Apple Music URL**: Input an Apple Music song or album URL.
-* **`[5]` Configure Lyrics Formats & Precision**: Toggle `.lrc`, `.txt`, `.ttml` formats or pick quick presets (ONLY LRC, ONLY TTML, ALL, etc.).
-* **`[6]` Configure Lyric Providers & Priority**: Re-order provider priority, enable/disable individual sources, toggle Sync Hierarchy, and set Cubey JWT tokens.
-* **`[7]` Configure Download Output Folder**: Set custom download directory and toggle provider subfolders.
+* **`[3]` Download via Apple Music URL**: Input an Apple Music song or album URL.
+* **`[4]` Configure Formats to Save**: Toggle `.lrc`, `.txt`, `.ttml` formats or pick quick presets (ONLY LRC, ONLY TTML, ALL, etc.).
+* **`[5]` Configure Lyric Providers & Priority**: Re-order provider priority, enable/disable individual sources, toggle Sync Hierarchy, and set Cubey JWT tokens.
+* **`[6]` Configure Download Output Folder**: Set custom download directory and toggle provider subfolders.
 
 ---
 
@@ -75,7 +74,7 @@ python vizx_lyrics.py -q "Legends Never Die League of Legends"
 python vizx_lyrics.py -q "Legends Never Die" -a
 ```
 
-#### Use Specific Custom Provider(s) in Priority Order
+#### Use Specific Provider(s) in Priority Order
 ```bash
 python vizx_lyrics.py -q "Blinding Lights" -p lrclib-synced,bLyrics-richsynced
 ```

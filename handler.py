@@ -98,8 +98,8 @@ def download_lyrics(
         base_storage = output_dir
 
     final_dir = os.path.join(base_storage, target_folder_name)
-    if not os.path.exists(final_dir):
-        os.makedirs(final_dir, exist_ok=True)
+    any_saved = False
+    created_dirs = set()
 
     for track in data["tracks"]:
         __file = track.get("file")
@@ -135,7 +135,6 @@ def download_lyrics(
         for res in results:
             if organize_by_provider and provider_mode == "multi":
                 target_dir = os.path.join(final_dir, __sanitize(res.provider_name))
-                os.makedirs(target_dir, exist_ok=True)
                 file_base = sanitized_filename
             else:
                 target_dir = final_dir
@@ -148,8 +147,12 @@ def download_lyrics(
                     logger.warning(f'"{file_base}.lrc" already exists!')
                 else:
                     logger.info(f'Saving [{res.provider_name}] "{file_base}.lrc"...')
+                    if target_dir not in created_dirs:
+                        os.makedirs(target_dir, exist_ok=True)
+                        created_dirs.add(target_dir)
                     with open(path, "w", encoding="utf-8") as l:
                         l.write('\n'.join(res.lrc_lines))
+                    any_saved = True
 
             if save_txt and res.txt_lines:
                 path = os.path.join(target_dir, f"{file_base}.txt")
@@ -157,8 +160,12 @@ def download_lyrics(
                     logger.warning(f'"{file_base}.txt" already exists!')
                 else:
                     logger.info(f'Saving [{res.provider_name}] "{file_base}.txt"...')
+                    if target_dir not in created_dirs:
+                        os.makedirs(target_dir, exist_ok=True)
+                        created_dirs.add(target_dir)
                     with open(path, "w", encoding="utf-8") as l:
                         l.write('\n'.join(res.txt_lines))
+                    any_saved = True
 
             if save_ttml and res.ttml_content:
                 path = os.path.join(target_dir, f"{file_base}.ttml")
@@ -166,10 +173,15 @@ def download_lyrics(
                     logger.warning(f'"{file_base}.ttml" already exists!')
                 else:
                     logger.info(f'Saving [{res.provider_name}] "{file_base}.ttml"...')
+                    if target_dir not in created_dirs:
+                        os.makedirs(target_dir, exist_ok=True)
+                        created_dirs.add(target_dir)
                     with open(path, "w", encoding="utf-8") as l:
                         l.write(res.ttml_content)
+                    any_saved = True
 
-    logger.info(f"\nDone. Files saved in: {final_dir}")
+    if any_saved:
+        logger.info(f"\nDone. Files saved in: {final_dir}")
 
 def arguments(args):
     config = Configure(CONFIG)
